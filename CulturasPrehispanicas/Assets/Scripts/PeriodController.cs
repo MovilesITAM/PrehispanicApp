@@ -4,10 +4,11 @@ using System.Collections;
 
 public class PeriodController : MonoBehaviour {
 
-    public Text period;
-    public Text info;
+    public Text txtPeriod;
+    public Sprite[] infoSprites;
+    public Image infoImage;
+    public GameObject[] periods;
     string[] periodNames = new string[] { "Preclásico", "Clásico", "Posclásico" };
-    string[] periodDescriptions = new string[] { "Primer periodo", "Segundo periodo", "Tercer periodo" };
     int currentPeriod;
 
     void Start () {
@@ -16,8 +17,11 @@ public class PeriodController : MonoBehaviour {
 	}
 
     void setValues(){
-        period.text = periodNames[currentPeriod];
-        info.text = periodDescriptions[currentPeriod];
+        txtPeriod.text = periodNames[currentPeriod];
+        infoImage.sprite = infoSprites[currentPeriod];
+        for(int i = 0; i < periods.Length; i++){
+            periods[i].SetActive(false);
+        }periods[currentPeriod].SetActive(true);
     }
 
 	public void changePeriod(int increment){
