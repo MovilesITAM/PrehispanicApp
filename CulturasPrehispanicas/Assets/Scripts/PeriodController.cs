@@ -31,8 +31,4 @@ public class PeriodController : MonoBehaviour {
         if (currentPeriod >= periodNames.Length) currentPeriod = periodNames.Length - 1;
         PlayerPrefs.SetInt("CurrentPeriod",currentPeriod);
     }
-
-	void Update () {
-	
-	}
 }
