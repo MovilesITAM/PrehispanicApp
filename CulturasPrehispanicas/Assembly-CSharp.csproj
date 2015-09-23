@@ -48,7 +48,9 @@
   <ItemGroup>
      <Compile Include="Assets\Scripts\GamePauseController.cs" />
      <Compile Include="Assets\Scripts\GameSelectionController.cs" />
+     <Compile Include="Assets\Scripts\GoHomeController.cs" />
      <Compile Include="Assets\Scripts\MayaGameController.cs" />
+     <Compile Include="Assets\Scripts\MayaNumberController.cs" />
      <Compile Include="Assets\Scripts\PeriodController.cs" />
  <Reference Include="UnityEngine.UI">
  <HintPath>C:/Program Files/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>
