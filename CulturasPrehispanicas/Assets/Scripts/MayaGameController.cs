@@ -2,21 +2,11 @@
 using System.Collections;
 
 public class MayaGameController : MonoBehaviour {
-
+	
 	public GameObject corn;
 	private Renderer cornRenderer;
 	public int cornCols, cornRows;
 	public GameObject[,] cornObjects;
-	public Sprite[] defaultSprites;
-	public Sprite[] selectedSprites;
-	/* 0 - normal
-	   1 - inmaduro
-	   2 - quemado
-	   3 - gusanos
-	   4 - ahogado
-	   5 - vacio*/
-	private int[,] cornStates;
-	private int[,] selectedStates;
 
 	void initCornGrid(){
 		int i = 0; int j = cornCols/2;
@@ -36,28 +26,26 @@ public class MayaGameController : MonoBehaviour {
 				cornObjects[i,j] = (GameObject)Instantiate(corn,new Vector2(cornObjects[i-1,j].transform.position.x,cornObjects[i-1,j].transform.position.y-cornRenderer.bounds.size.y),Quaternion.identity);
 			}
 		}
-		for (i=0; i<cornRows; i++)
+		int N = cornRows * cornCols, st;
+		for (i=0; i<cornRows; i++) {
 			for (j=0; j<cornCols; j++) {
-				cornStates [i, j] = Random.Range (0, 6);
-				cornObjects [i, j].GetComponent<SpriteRenderer> ().sprite = defaultSprites [cornStates [i, j]];
+				int value = Random.Range(0,N);
+				if(value<N/2) st = 0;
+				else if(value<5*N/8) st = 1;
+				else if(value<6*N/8) st = 2;
+				else if(value<7*N/8) st = 3;
+				else st = 4;
+				CornController cornScript = cornObjects [i, j].GetComponent<CornController> ();
+				cornScript.setCornState(st);
 			}
+		}
 	}
 
 	// Use this for initialization
 	void Awake () {
 		cornObjects = new GameObject[cornRows, cornCols];
-		cornStates = new int[cornRows, cornCols];
-		selectedStates = new int[cornRows, cornCols];
 		cornRenderer = corn.GetComponent<Renderer>();
 		initCornGrid();
-	}
-
-	void updateTouchedCorn(int i, int j){
-		if (selectedStates [i, j] == 0) {
-			cornObjects [i, j].GetComponent<SpriteRenderer> ().sprite = defaultSprites [cornStates [i, j]];
-		} else {
-			cornObjects [i, j].GetComponent<SpriteRenderer> ().sprite = selectedSprites [cornStates [i, j]];
-		}
 	}
 
 	// Update is called once per frame
@@ -81,8 +69,8 @@ public class MayaGameController : MonoBehaviour {
 				RaycastHit2D hit = Physics2D.GetRayIntersection(ray,Mathf.Infinity);
 				
 				if(hit.collider != null &&  hit.collider.transform == cornObjects[i,j].transform){
-					selectedStates[i,j]++; selectedStates[i,j]%=2;
-					updateTouchedCorn(i,j);
+					CornController cornScript = cornObjects [i, j].GetComponent<CornController> ();
+					cornScript.selectCorn();
 					break;
 				}
 			}

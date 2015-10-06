@@ -46,6 +46,7 @@
 	</Reference>
   </ItemGroup>
   <ItemGroup>
+     <Compile Include="Assets\Scripts\CornController.cs" />
      <Compile Include="Assets\Scripts\GamePauseController.cs" />
      <Compile Include="Assets\Scripts\GameSelectionController.cs" />
      <Compile Include="Assets\Scripts\GoHomeController.cs" />
