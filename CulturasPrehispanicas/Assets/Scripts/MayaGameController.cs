@@ -5,10 +5,15 @@ public class MayaGameController : MonoBehaviour {
 	
 	public GameObject corn;
 	private Renderer cornRenderer;
+    private Renderer powerRenderer;
 	public int cornCols, cornRows;
 	public GameObject[,] cornObjects;
+    public GameObject[] rocks;
+    public GameObject[] powers;
+    public bool isPowerSelected;
+    public int selectedPower;
 
-	void initCornGrid(){
+    void initCornGrid(){
 		int i = 0; int j = cornCols/2;
 		cornObjects [i, j] = (GameObject)Instantiate (corn, corn.transform.position, Quaternion.identity);
 		j--;
@@ -45,36 +50,295 @@ public class MayaGameController : MonoBehaviour {
 	void Awake () {
 		cornObjects = new GameObject[cornRows, cornCols];
 		cornRenderer = corn.GetComponent<Renderer>();
+        powerRenderer = powers[0].GetComponent<Renderer>();
 		initCornGrid();
+        isPowerSelected = false;
+        selectedPower = -1;
 	}
+    //Check if we touched a corn on the grid
+    // returns the i,j indexes in a vector 2
+    // Vector2.zero if we didn't touch a corn
+    private Vector2 checkSelectCorn(Vector2 inputPosition){
+        for (int i = 0; i < cornRows; i++){
+            for (int j = 0; j < cornCols; j++){
+                Ray ray = Camera.main.ScreenPointToRay(inputPosition);
+                RaycastHit2D hit = Physics2D.GetRayIntersection(ray, Mathf.Infinity);
+                //check the hit
+                if (hit.collider != null && hit.collider.transform == cornObjects[i, j].transform){
+                    return new Vector2(i, j);
+                }
+            }
+        }
+        return new Vector2(-1, -1);
+    }
 
-	// Update is called once per frame
-	void Update () {
-		Vector2 inputPosition = new Vector2(0,0);
-#if UNITY_EDITOR_WIN
-		if (Input.GetMouseButtonDown (0)) {
+    private void deselectAllCorns(){
+        for (int i = 0; i < cornRows; i++)
+        {
+            for (int j = 0; j < cornCols; j++)
+            {
+                CornController cc = cornObjects[i, j].GetComponent<CornController>();
+                cc.selected = 0; cc.changeSprite();
+            }
+        }
+
+    }
+
+    private int checkSelectRock(Vector2 inputPosition){
+        for (int j = 0; j < 4; j++){
+            Ray ray = Camera.main.ScreenPointToRay(inputPosition);
+            RaycastHit2D hit = Physics2D.GetRayIntersection(ray, Mathf.Infinity);
+            //check the hit
+            if (hit.collider != null && hit.collider.transform == rocks[j].transform){
+                return j;
+            }
+        }
+        return -1;
+    }
+
+    private void changeOneCornState(CornController cornContr){
+        if (cornContr.state == 0){//State = "sano"
+            if (selectedPower == 0)//Selected power => moon
+                cornContr.state = 3;//new state = "gusanos"
+            else if (selectedPower == 1)//power => rain
+                cornContr.state = 4;//new state = "ahogado"
+            else if (selectedPower == 3)//power => sun
+                cornContr.state = 2; // new state = "quemado"
+        }else if (cornContr.state == 1){//State = "brote"
+            if (selectedPower == 0)//Selected power => moon
+                cornContr.state = 3;//new state = "gusanos"
+            else if (selectedPower == 1)//power => rain
+                cornContr.state = 0;//new state = "ahogado"
+            else if (selectedPower == 2)//power => mountain
+                cornContr.state = 0; // new state = "quemado"
+            else if (selectedPower == 3)//power => sun
+                cornContr.state = 5; // new state = "vacio"
+        }else if (cornContr.state == 2){//State = "quemado"
+            if (selectedPower == 0)//Selected power => moon
+                cornContr.state = 0;//new state = "sano"
+            else if (selectedPower == 1)//power => rain
+                cornContr.state = 0;//new state = "sano"
+            else if (selectedPower == 3)//power => sun
+                cornContr.state = 5; // new state = "vacio"
+        }else if (cornContr.state == 3){//State = "gusanos"
+            if (selectedPower == 0)//Selected power => moon
+                cornContr.state = 5;//new state = "vacio"
+            else if (selectedPower == 2)//power => mountain
+                cornContr.state = 0; // new state = "sano"
+            else if (selectedPower == 3)//power => sun
+                cornContr.state = 0; // new state = "sano"
+        }else if (cornContr.state == 4){//State = "ahogado"
+            if (selectedPower == 0)//Selected power => moon
+                cornContr.state = 0;//new state = "sano"
+            else if (selectedPower == 1)//power => rain
+                cornContr.state = 5;//new state = "vacio"
+            else if (selectedPower == 2)//power => mountain
+                cornContr.state = 5; // new state = "vacio"
+            else if (selectedPower == 3)//power => sun
+                cornContr.state = 0; // new state = "sano"
+        }else if (cornContr.state == 5){//State = "vacio"
+            if (selectedPower == 1)//power => rain
+                cornContr.state = 1;//new state = "brote"
+        }
+        cornContr.changeSprite();
+    }
+
+    private void applyMoonPower(Vector2 cornCoords){
+        GameObject [] tempObjs = new GameObject[4];
+        int x = (int)cornCoords.x, y = (int)cornCoords.y;
+        Vector2 initialPosition = cornObjects[x,y].transform.position;
+        int[] r = {0,0,1,1};
+        int[] c = {0,1,1,0};
+        for (int i = 0; i < 4; i++){
+            if(x+r[i]>=0 && x+r[i]<4 && y+c[i]>=0 && y + c[i] < 5){ //We can instantiate a power
+                Vector2 pos = cornObjects[x + r[i], y + c[i]].transform.position;
+                GameObject temp = (GameObject)Instantiate(powers[0], new Vector3(pos.x, pos.y, powers[0].transform.position.z), Quaternion.identity);
+                Object.Destroy(temp, 1.2f);
+                changeOneCornState(cornObjects[x + r[i], y + c[i]].GetComponent <CornController>());
+            }
+        }
+    }
+    private void applyRainPower(Vector2 cornCoords){
+        GameObject[] tempObjs = new GameObject[4];
+        int x = (int)cornCoords.x, y = (int)cornCoords.y;
+        Vector2 initialPosition = cornObjects[x, y].transform.position;
+        int[] r = { 0, 0, 1, 2 };
+        int[] c = { 0, -1, 0, 0 };
+        for (int i = 0; i < 4; i++)
+        {
+            if (x + r[i] >= 0 && x + r[i] < 4 && y + c[i] >= 0 && y + c[i] < 5)
+            { //We can instantiate a power
+                Vector2 pos = cornObjects[x + r[i], y + c[i]].transform.position;
+                GameObject temp = (GameObject)Instantiate(powers[1], new Vector3(pos.x, pos.y, powers[1].transform.position.z), Quaternion.identity);
+                Object.Destroy(temp, 1.2f);
+                changeOneCornState(cornObjects[x + r[i], y + c[i]].GetComponent<CornController>());
+            }
+        }
+    }
+    private void applyMountainPower(Vector2 cornCoords){
+        GameObject[] tempObjs = new GameObject[4];
+        int x = (int)cornCoords.x, y = (int)cornCoords.y;
+        Vector2 initialPosition = cornObjects[x, y].transform.position;
+        int[] r = { 0, 0, 0, -1 };
+        int[] c = { 0, 1, -1, 0 };
+        for (int i = 0; i < 4; i++)
+        {
+            if (x + r[i] >= 0 && x + r[i] < 4 && y + c[i] >= 0 && y + c[i] < 5)
+            { //We can instantiate a power
+                Vector2 pos = cornObjects[x + r[i], y + c[i]].transform.position;
+                GameObject temp = (GameObject)Instantiate(powers[2], new Vector3(pos.x, pos.y, powers[2].transform.position.z), Quaternion.identity);
+                Object.Destroy(temp, 1.2f);
+                changeOneCornState(cornObjects[x + r[i], y + c[i]].GetComponent<CornController>());
+            }
+        }
+    }
+    private void applySunPower(Vector2 cornCoords){
+        GameObject[] tempObjs = new GameObject[4];
+        int x = (int)cornCoords.x, y = (int)cornCoords.y;
+        Vector2 initialPosition = cornObjects[x, y].transform.position;
+        int[] r = { 0, 0, 0, -1, 1 };
+        int[] c = { 0, 1, -1, 0, 0 };
+        for (int i = 0; i < 5; i++)
+        {
+            if (x + r[i] >= 0 && x + r[i] < 4 && y + c[i] >= 0 && y + c[i] < 5)
+            { //We can instantiate a power
+                Vector2 pos = cornObjects[x + r[i], y + c[i]].transform.position;
+                GameObject temp = (GameObject)Instantiate(powers[3], new Vector3(pos.x, pos.y, powers[3].transform.position.z), Quaternion.identity);
+                Object.Destroy(temp, 1.2f);
+                changeOneCornState(cornObjects[x + r[i], y + c[i]].GetComponent<CornController>());
+            }
+        }
+    }
+    private void applyPowerToCorns(Vector2 cornCoords){
+        if (selectedPower == 0) applyMoonPower(cornCoords);
+        else if (selectedPower == 1) applyRainPower(cornCoords);
+        else if (selectedPower == 2) applyMountainPower(cornCoords);
+        else applySunPower(cornCoords);
+    }
+
+    // Update is called once per frame
+    void Update () {
+        //Debug.Log("Selected Power: " + selectedPower+ " c: "+(c++));
+        Vector2 inputPosition = new Vector2(0,0);
+#if UNITY_STANDALONE || UNITY_EDITOR
+        if (Input.GetMouseButtonDown (0)) {
 			inputPosition = Input.mousePosition;
-		}
+            if (!isPowerSelected){//If there's no power selected
+                Vector2 corn = checkSelectCorn(inputPosition);
+                if (corn.x >= 0) { //We selected a corn
+                    CornController cornCont = cornObjects[(int)corn.x, (int)corn.y].GetComponent<CornController>();
+                    cornCont.selectCorn();
+                }
+                else{
+                    int r = checkSelectRock(inputPosition);
+                    if (r >= 0){
+                        PowerController pw = rocks[r].GetComponent<PowerController>();
+                        pw.selectRock();
+                        selectedPower = r;
+                        isPowerSelected = true;
+                    }
+                }
+            }else{//We have a power selected
+                int r = checkSelectRock(inputPosition);
+                if (r >= 0){ // we selected a rock
+                    if (selectedPower == r){ //we selected the same rock
+                        PowerController pw = rocks[r].GetComponent<PowerController>();
+                        pw.deselect();
+                        selectedPower = -1;
+                        isPowerSelected = false;
+                    }
+                    else{ // we selected a different rock
+                        PowerController pw;
+                        if (selectedPower >= 0){
+                            pw = rocks[selectedPower].GetComponent<PowerController>();
+                            pw.deselect(); //Deselect the previous one
+                        }
+                        pw = rocks[r].GetComponent<PowerController>();
+                        pw.selectRock(); //select the new one
+                        selectedPower = r;
+                        isPowerSelected = true;
+                    }
+                }else{//we have a power selected
+                    Vector2 corn = checkSelectCorn(inputPosition);
+                    if (corn.x >=0 ){ //We selected a corn
+                        deselectAllCorns();
+                        applyPowerToCorns(corn);
+                        rocks[selectedPower].GetComponent<PowerController>().deselect();
+                        selectedPower = -1;
+                        isPowerSelected = false;
+                    }
+                }
+            }
+            
+        }
 #endif
 
 
 #if UNITY_ANDROID
-		if (Input.touchCount>0 && Input.GetTouch(0).phase == TouchPhase.Ended) {
+        if (Input.touchCount>0 && Input.GetTouch(0).phase == TouchPhase.Ended) {
 			inputPosition = Input.GetTouch(0).position;
-		}
+            if (!isPowerSelected)
+            {//If there's no power selected
+                Vector2 corn = checkSelectCorn(inputPosition);
+                if (corn.x >= 0)
+                { //We selected a corn
+                    CornController cornCont = cornObjects[(int)corn.x, (int)corn.y].GetComponent<CornController>();
+                    cornCont.selectCorn();
+                }
+                else
+                {
+                    int r = checkSelectRock(inputPosition);
+                    if (r >= 0)
+                    {
+                        PowerController pw = rocks[r].GetComponent<PowerController>();
+                        pw.selectRock();
+                        selectedPower = r;
+                        isPowerSelected = true;
+                    }
+                }
+            }
+            else
+            {//We have a power selected
+                int r = checkSelectRock(inputPosition);
+                if (r >= 0)
+                { // we selected a rock
+                    if (selectedPower == r)
+                    { //we selected the same rock
+                        PowerController pw = rocks[r].GetComponent<PowerController>();
+                        pw.deselect();
+                        selectedPower = -1;
+                        isPowerSelected = false;
+                    }
+                    else
+                    { // we selected a different rock
+                        PowerController pw;
+                        if (selectedPower >= 0)
+                        {
+                            pw = rocks[selectedPower].GetComponent<PowerController>();
+                            pw.deselect(); //Deselect the previous one
+                        }
+                        pw = rocks[r].GetComponent<PowerController>();
+                        pw.selectRock(); //select the new one
+                        selectedPower = r;
+                        isPowerSelected = true;
+                    }
+                }
+                else
+                {//we have a power selected
+                    Vector2 corn = checkSelectCorn(inputPosition);
+                    if (corn.x >= 0)
+                    { //We selected a corn
+                        deselectAllCorns();
+                        applyPowerToCorns(corn);
+                        rocks[selectedPower].GetComponent<PowerController>().deselect();
+                        selectedPower = -1;
+                        isPowerSelected = false;
+                    }
+                }
+            }
+        }
 #endif
-		for(int i=0;i<cornRows;i++){
-			for(int j=0;j<cornCols;j++){
-				Ray ray = Camera.main.ScreenPointToRay(inputPosition);
-				RaycastHit2D hit = Physics2D.GetRayIntersection(ray,Mathf.Infinity);
-				
-				if(hit.collider != null &&  hit.collider.transform == cornObjects[i,j].transform){
-					CornController cornScript = cornObjects [i, j].GetComponent<CornController> ();
-					cornScript.selectCorn();
-					break;
-				}
-			}
-		}
+        
 	}
 
 

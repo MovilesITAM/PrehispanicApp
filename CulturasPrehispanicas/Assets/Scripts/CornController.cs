@@ -3,8 +3,8 @@ using System.Collections;
 
 public class CornController : MonoBehaviour {
 	
-	/* 0 - normal
-	   1 - inmaduro
+	/* 0 - sano
+	   1 - brote
 	   2 - quemado
 	   3 - gusanos
 	   4 - ahogado
